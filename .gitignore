@@ -1,0 +1,16 @@
+# Secrets and local data
+.env
+*.db
+*.db-journal
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+
+# Local skill symlinks (absolute paths; recreate from skills-lock.json)
+.claude/skills/
