@@ -1,0 +1,8 @@
+{
+  "id": "msg-005",
+  "conversationId": "conv-pr-482",
+  "from": {"emailAddress": {"name": "Marta Gomez", "address": "marta.gomez@example.com"}},
+  "subject": "Please review PR #482 (retry logic for the ingest worker)",
+  "receivedDateTime": "2026-11-19T06:15:00Z",
+  "bodyPreview": "Hey, please review PR #482 when you get a chance; I would like to merge it by Friday."
+}

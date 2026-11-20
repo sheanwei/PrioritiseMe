@@ -1,0 +1,10 @@
+[
+  {
+    "id": "msg-007",
+    "conversationId": "conv-promo-bf",
+    "from": {"emailAddress": {"name": "GadgetShop", "address": "noreply@gadgetshop.example"}},
+    "subject": "Black Friday: 40% off mechanical keyboards",
+    "receivedDateTime": "2026-11-19T08:00:00Z",
+    "bodyPreview": "Our biggest sale of the year. Sale ends Sunday. Unsubscribe from marketing email."
+  }
+]

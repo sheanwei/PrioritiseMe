@@ -1,0 +1,8 @@
+{
+  "id": "msg-001",
+  "conversationId": "conv-db3-access",
+  "from": {"emailAddress": {"name": "Priya Nair", "address": "priya.nair@example.com"}},
+  "subject": "Read access to db-3 for the analytics job",
+  "receivedDateTime": "2026-11-19T01:05:00Z",
+  "bodyPreview": "Hi, could you grant the analytics service account read access to db-3? Our nightly job has been failing since Monday. Thanks, Priya"
+}

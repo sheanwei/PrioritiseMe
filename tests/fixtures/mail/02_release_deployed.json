@@ -1,0 +1,8 @@
+{
+  "id": "msg-002",
+  "conversationId": "conv-release-42",
+  "from": {"emailAddress": {"name": "Release Bot Team", "address": "releases@example.com"}},
+  "subject": "FYI: release 4.2 has been deployed to production",
+  "receivedDateTime": "2026-11-19T02:10:00Z",
+  "bodyPreview": "Release 4.2 has been deployed to production at 02:00 UTC. No action needed. Release notes are on the wiki."
+}
