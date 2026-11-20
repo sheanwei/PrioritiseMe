@@ -1,1 +1,1 @@
-{"title": "Mail", "module": "panel.js", "order": 50}
+{"title": "Mail", "module": "panel.js", "order": 50, "region": "mail"}

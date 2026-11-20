@@ -94,7 +94,7 @@ def test_signin_endpoint_refused_in_fake_mode(client):
 
 def test_panel_manifest_order_and_title(client):
     manifest = json.loads((STATIC / "panel.json").read_text())
-    assert manifest == {"title": "Mail", "module": "panel.js", "order": 50}
+    assert manifest == {"title": "Mail", "module": "panel.js", "order": 50, "region": "mail"}
     panels = client.get("/api/core/panels").json()
     mail = next(p for p in panels if p["slice"] == "s4_outlook")
     assert mail["title"] == "Mail" and mail["order"] == 50

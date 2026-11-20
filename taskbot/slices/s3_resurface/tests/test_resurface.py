@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from taskbot.core import clock, items, scheduler
 from taskbot.slices.s3_resurface import router, service
@@ -128,7 +130,10 @@ def test_panels_registered_and_served(client):
     assert [(p["title"], p["order"]) for p in mine] == [
         ("Resurfacing today", 40),
         ("Probably not needed", 45),
+        ("Probably not needed", 45),
     ]
+    manifest = json.loads((Path(__file__).resolve().parents[1] / "static" / "panel.json").read_text())
+    assert [m["region"] for m in manifest] == ["hidden", "list-footer", "status"]
     for p in mine:
         res = client.get(p["module"])
         assert res.status_code == 200
