@@ -16,7 +16,20 @@ export function mount(el, api) {
   const list = h("ul", { class: "item-list", "aria-label": "Recent mail" });
   const empty = h("p", { class: "muted", hidden: true }, "No mail yet. Press Sync now.");
 
-  el.append(header, signinBox, countsRow, list, empty);
+  // Mail rows carry more metadata than tray rows, so stack the subject above the
+  // metadata instead of using the core one-line .item layout (which squeezed the
+  // subject to one character wide). Scoped to this panel; core CSS is untouched.
+  const style = h("style", {});
+  style.textContent = `
+    .s4-mail .item.s4-mail-row { flex-direction: column; align-items: stretch; gap: 6px; }
+    .s4-mail .s4-mail-row .item-meta { flex-wrap: wrap; flex-shrink: 1; align-items: center; min-width: 0; }
+    .s4-mail .s4-mail-row .s4-from { overflow-wrap: anywhere; }
+    .s4-mail .s4-mail-actions { margin-left: auto; display: flex; gap: 6px; }
+    .s4-mail .s4-counts { flex-wrap: wrap; }
+    .s4-mail .quickadd-row { align-items: center; flex-wrap: wrap; }`;
+  el.classList.add("s4-mail");
+  countsRow.classList.add("s4-counts");
+  el.append(style, header, signinBox, countsRow, list, empty);
 
   let signinTimer = null;
 
@@ -107,7 +120,9 @@ export function mount(el, api) {
     countsRow.replaceChildren(
       ...["needs_action", "fyi", "noise"].map((k) =>
         h("span", { class: `badge badge-mail-${k}`, title: LABELS[k] }, `${LABELS[k]}: ${counts[k] || 0}`)),
-      counts.unclassified ? h("span", { class: "badge", title: "Waiting for the LLM" }, `Unclassified: ${counts.unclassified}`) : null,
+      ...(counts.unclassified
+        ? [h("span", { class: "badge", title: "Waiting for the LLM" }, `Unclassified: ${counts.unclassified}`)]
+        : []),
     );
   }
 
@@ -121,18 +136,20 @@ export function mount(el, api) {
             onclick: () => correct(m, actionable ? "fyi" : "needs_action"),
           }, actionable ? "Not actionable" : "This needs action")
         : null;
-      return h("li", { class: "item", "data-email-id": m.id },
+      return h("li", { class: "item s4-mail-row", "data-email-id": m.id },
         h("span", { class: "item-title", title: m.body_preview || "" }, m.subject || "(no subject)"),
         h("span", { class: "item-meta" },
           h("span", { class: "badge" }, LABELS[m.classification || "unclassified"]),
           m.user_corrected ? h("span", { class: "badge", title: "You corrected this" }, "corrected") : null,
-          h("span", { class: "muted" }, m.from || ""),
+          h("span", { class: "muted s4-from" }, m.from || ""),
           h("span", { class: "muted" }, api.timeAgo(m.received_at)),
-          m.item_id ? h("button", {
-            type: "button", class: "btn btn-ghost btn-small",
-            onclick: () => api.emit("item:open", { id: m.item_id }),
-          }, "Open item") : null,
-          button,
+          h("span", { class: "s4-mail-actions" },
+            m.item_id ? h("button", {
+              type: "button", class: "btn btn-ghost btn-small",
+              onclick: () => api.emit("item:open", { id: m.item_id }),
+            }, "Open item") : null,
+            button,
+          ),
         ),
       );
     }));
