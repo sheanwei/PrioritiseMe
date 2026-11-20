@@ -58,6 +58,7 @@ class SliceInfo:
                     "title": entry.get("title", self.name),
                     "module": module,
                     "order": entry.get("order", 100),
+                    "region": entry.get("region"),
                     "slice": self.name,
                 }
             )
@@ -84,8 +85,14 @@ def discover_slices(slices_dir: Path = SLICES_DIR, package: str = SLICES_PACKAGE
     return found
 
 
+#: Shell regions a panel manifest may name (see PRD §4.7). Anything else, or a
+#: missing ``region``, mounts in the "More" fallback section of the Triage tab.
+REGIONS = ("status", "list-footer", "detail", "mail", "review", "hidden")
+
+
 def core_panels() -> list[dict[str, Any]]:
-    return json.loads((STATIC_DIR / "panels.json").read_text(encoding="utf-8"))
+    raw = json.loads((STATIC_DIR / "panels.json").read_text(encoding="utf-8"))
+    return [{"order": 100, **p, "region": p.get("region")} for p in raw]
 
 
 def create_app(slices_dir: Path = SLICES_DIR, slices_package: str = SLICES_PACKAGE) -> FastAPI:
