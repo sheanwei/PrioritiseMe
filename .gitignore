@@ -2,12 +2,15 @@
 .env
 *.db
 *.db-journal
+*.db-wal
+*.db-shm
 
 # Python
 .venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+*.egg-info/
 
 # Node
 node_modules/

@@ -96,43 +96,58 @@ Every agent must read this section before starting. After S0 merges, **`taskbot/
 ```
 taskbot/
   core/
-    config.py      # loads .env
+    config.py      # loads .env; settings() + get(name)
+    clock.py       # now()/now_iso(); set_now() freezes time in tests
     db.py          # SQLite connection + migrations runner
-    models.py      # enums + dataclasses below
+    models.py      # enums, state machine, Item/Event dataclasses
     items.py       # item repository + transition() + log_event()
-    llm.py         # complete_json(); fake mode
+    llm.py         # complete_json(); fake mode; `python -m taskbot.core.llm` smoke test
     scheduler.py   # register_job(name, every_seconds, fn)
-    app.py         # FastAPI app, mounts slice routers, serves the dashboard
+    app.py         # FastAPI app, discovers + mounts slices, serves the dashboard
+    routes.py      # /api/core: health, panels, quick-add, item reads
   slices/
-    s1_intake/     router.py  service.py  prompts.py  static/panel.js  tests/
+    README.md      # practical guide for slice authors (read this)
+    s1_intake/     __init__.py  router.py  service.py  prompts.py  static/{panel.json,panel.js}  tests/
     s2_timebox/    ...
     s3_resurface/  ...
     s4_outlook/    ...
     s5_review/     ...
   static/
-    index.html     # dashboard shell; loads panels from the registry
-    panels.json    # ordered list of panel modules
+    index.html, app.js, style.css   # dashboard shell
+    panels.json    # core panels only (tray)
+    panels/tray.js # quick-add + tray list
 migrations/
   0001_core.sql    # S0
   01xx_<slice>.sql # one numbered range per slice: s1=0100s, s2=0200s, ...
 tests/fixtures/    # shared seed helpers
+conftest.py        # shared fixtures: fresh DB, fake LLM/mail, scheduler off; `client`
 .env.example       # documented keys; real .env is git-ignored
 ```
 
-**Ownership rule:** an agent edits only its own `slices/sN_*/` folder, its own migration number range, and its own entry in `panels.json`.
+**Slice wiring (automatic, no core edits needed):**
+- A slice's `router.py` must define `router = APIRouter()` and may define `startup()`.
+- The router is mounted at `/api/<folder>`.
+- `startup()` runs once after migrations. Register background jobs there.
+- `static/` is served at `/slices/<folder>/`.
+- `static/panel.json` holds the slice's dashboard panel entries, as one object or a list. Each entry has `title`, `module` and `order`.
+
+**Ownership rule:** an agent edits only its own `slices/sN_*/` folder (including its `panel.json`) and its own migration number range.
 
 ### 4.2 Configuration (`.env`)
 
 | Key | Purpose | Default |
 |---|---|---|
 | `OPENCODE_API_KEY` | OpenCode Zen key | required unless `TASKBOT_LLM=fake` |
-| `OPENCODE_BASE_URL` | LLM endpoint | `https://opencode.ai/zen/v1` |
+| `OPENCODE_BASE_URL` | LLM endpoint (chat completions, per `https://opencode.ai/zen/v1/models`) | `https://opencode.ai/inference/openai/v1` |
 | `OPENCODE_MODEL` | Main model (ask card, suggestion) | owner sets |
 | `OPENCODE_MODEL_CHEAP` | Email classification model | same as above |
 | `TASKBOT_LLM` | `real` or `fake` | `real` |
 | `TASKBOT_MAIL` | `mcp` or `fake` | `mcp` |
-| `TASKBOT_PORT` | Dashboard port | `8765` |
+| `TASKBOT_MAIL_MCP_COMMAND` | Command that launches the Outlook MCP server (S4) | `npx -y @softeria/ms-365-mcp-server --preset mail` |
+| `TASKBOT_PORT` | Dashboard port (`--port` overrides) | `8765` |
 | `TASKBOT_DB` | SQLite path | `./taskbot.db` |
+| `TASKBOT_SCHEDULER` | `on` / `off` background jobs | `on` |
+| `TASKBOT_DEBUG` | `1` logs LLM prompts and responses | `0` |
 
 ### 4.3 Core data model (`0001_core.sql`)
 
@@ -204,11 +219,36 @@ complete_json(system: str, user: str, schema: dict, model: str | None = None) ->
 `register_job(name, every_seconds, fn)`: a single asyncio loop inside the app process. Jobs must be idempotent.
 
 ### 4.7 Dashboard shell
-- `index.html` reads `panels.json` and loads each panel as an ES module.
-- Each panel exports `mount(el, api)`. `api` is a thin `fetch` wrapper around `/api/...`.
+- `index.html` fetches `/api/core/panels`, which merges the core `panels.json` with every slice's `panel.json` and sorts them by `order`. It loads each panel as an ES module.
+- Panel orders: tray 10, S1 20, S2 30, S3 40–45, S4 50, S5 60.
+- Each panel exports `mount(el, api)`. `api` provides:
+  - `get/post/put/patch/del`: a thin `fetch` wrapper around `/api/...`
+  - `on(type, fn)` / `emit(type, detail)`: an in-page event bus
+  - `notify(title, body)`: a browser notification plus a toast
+  - `toast(msg, kind)`
+  - `h(tag, attrs, ...children)`: safe DOM building
+  - `timeAgo(iso)`
+- **Shared UI events:**
+  - `items:changed`: emit it after creating or changing items, so the other panels refresh.
+  - `item:open {id}`: the tray emits it when an item is clicked. **S1 listens** and opens the intake gate.
 - Slice API routes live under `/api/<slice>/...`.
-- No frontend framework or build step.
+- No frontend framework or build step. Never put untrusted text (email, threads) into `innerHTML`.
 - Browser notifications go through `api.notify(title, body)`. The shell asks for notification permission once.
+
+### 4.8 Time
+- Use `core.clock.now()` / `now_iso()`, never `datetime.now()`, so tests can freeze time.
+- Timestamps are UTC ISO-8601 strings with offset. Date-only fields such as `scheduled_for` are `YYYY-MM-DD`.
+
+### 4.9 Core API (`core/items.py`)
+- `create_item(title, source, *, raw_context, source_ref, **columns)`: creates the item in `tray` and logs `created`.
+- `get_item(id)` and `list_items(status, *, source, source_ref, limit, newest_first)`.
+- `update_fields(id, **columns)`: sets any column except `id`, `status` and `created_at`. It accepts `ask_card=dict`. Columns added by slices are allowed, and are exposed as `item.extra[...]`.
+- `transition(id, to, **columns)`:
+  - validates against the state table and raises `InvalidTransition` for anything else
+  - writes `status_changed`
+  - sets `closed_at` when the item enters a terminal state
+- `log_event(id, kind, payload)` and `list_events(*, item_id, kinds, since, until)`.
+- Every function accepts `conn=` so several calls can run in one transaction.
 
 ---
 
@@ -228,7 +268,7 @@ Each slice lists its user story, its requirements (`FR-xx`), the files it owns, 
 | FR-02 | Migrations run automatically on start, in order, and only once each |
 | FR-03 | Quick-add box: a title plus an optional pasted thread creates an item with `source=manual`, `status=tray` and a `created` event |
 | FR-04 | The tray panel lists tray items, newest first |
-| FR-05 | All of §4 is implemented: config, db, models, items/transition/log_event, llm (real + fake), scheduler, shell, panels.json |
+| FR-05 | All of §4 is implemented: config, clock, db, models, items/transition/log_event, llm (real + fake), scheduler, slice discovery, and the dashboard shell with its panel registry and event bus |
 | FR-06 | `git init`, `.gitignore` (`.env`, `*.db`, `.venv`), `.env.example`, a `README` with run and test commands, and `pytest` set up |
 | FR-07 | `tests/fixtures`: `seed_item(**overrides)` and `seed_event(...)` helpers for the other slices |
 
@@ -371,7 +411,7 @@ Each slice lists its user story, its requirements (`FR-xx`), the files it owns, 
 
 | ID | Requirement |
 |---|---|
-| FR-60 | Merge all slices and resolve the `panels.json` order: Tray, Timeboxes, Resurfacing, Probably not needed, Mail, Review |
+| FR-60 | Merge all slices and check that the panels appear in this order (set by each slice's `panel.json` `order` value): Tray, Intake, Timeboxes, Resurfacing, Probably not needed, Mail, Review |
 | FR-61 | Connect S1 to S2's re-assess hook (FR-23) and to S4's pre-filled requester (FR-45) |
 | FR-62 | End-to-end test in fake mode: email → tray → gate → timebox → expiry → re-assess → schedule → resurface → stale close → appears in review |
 | FR-63 | Smoke test on the real stack: real OpenCode key and real Outlook sign-in. Record whatever breaks. |

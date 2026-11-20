@@ -1,0 +1,3 @@
+[
+  { "id": "tray", "title": "Tray", "module": "/static/panels/tray.js", "order": 10 }
+]

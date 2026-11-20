@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "taskbot",
+      "runtimeExecutable": ".venv/Scripts/python.exe",
+      "runtimeArgs": ["-m", "taskbot", "--port", "8770"],
+      "port": 8770,
+      "autoPort": false
+    }
+  ]
+}
