@@ -1,0 +1,8 @@
+{
+  "id": "msg-006",
+  "conversationId": "conv-offsite",
+  "from": {"emailAddress": {"name": "Engineering Office", "address": "eng-office@example.com"}},
+  "subject": "Announcement: team offsite moved to 4 December",
+  "receivedDateTime": "2026-11-19T07:00:00Z",
+  "bodyPreview": "For your information, the offsite has moved to 4 December. The agenda will follow."
+}

@@ -1,0 +1,8 @@
+{
+  "id": "msg-003",
+  "conversationId": "conv-newsletter-47",
+  "from": {"emailAddress": {"name": "Cloud Weekly", "address": "newsletter@cloudweekly.example"}},
+  "subject": "Cloud Weekly #47: ten Kubernetes tips you missed",
+  "receivedDateTime": "2026-11-19T03:00:00Z",
+  "bodyPreview": "This week: autoscaling gotchas, a webinar on cost control, and more. Click here to unsubscribe."
+}
