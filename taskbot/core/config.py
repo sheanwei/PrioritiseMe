@@ -6,9 +6,11 @@ can change environment variables without restarting the process.
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 
@@ -51,6 +53,22 @@ class Settings:
     db_path: Path
     scheduler_enabled: bool
     debug: bool
+    # Extra JSON merged into every chat-completions request body, e.g.
+    # {"thinking": {"type": "disabled"}} to skip reasoning for faster replies.
+    opencode_extra_body: dict[str, Any] | None = None
+
+
+def _json_object(name: str) -> dict[str, Any] | None:
+    raw = get(name)
+    if raw is None:
+        return None
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"{name} must be a JSON object: {exc}") from exc
+    if not isinstance(value, dict):
+        raise ValueError(f"{name} must be a JSON object")
+    return value
 
 
 def settings() -> Settings:
@@ -70,4 +88,5 @@ def settings() -> Settings:
         db_path=db_path,
         scheduler_enabled=_flag("TASKBOT_SCHEDULER", "on"),
         debug=_flag("TASKBOT_DEBUG", "0"),
+        opencode_extra_body=_json_object("OPENCODE_EXTRA_BODY"),
     )

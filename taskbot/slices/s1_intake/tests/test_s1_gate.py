@@ -189,7 +189,9 @@ def test_resuggest_uses_edited_answers(client, real_llm):
     assert len(events(item.id, "suggested")) == 2
 
 
-def test_resuggest_applies_guardrails_to_edited_facts(client):
+def test_resuggest_applies_guardrails_to_edited_facts(client, real_llm):
+    do_now = json.loads(analysis(outcome="do_now"))["suggestion"]
+    real_llm([analysis(), json.dumps({"suggestion": do_now})])
     item = seed_item(raw_context=THREAD)
     client.post(f"{BASE}/{item.id}/analyze")
     state = client.post(f"{BASE}/{item.id}/resuggest", json={

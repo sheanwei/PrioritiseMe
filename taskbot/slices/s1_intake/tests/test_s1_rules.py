@@ -46,13 +46,22 @@ def test_production_impact_on_non_incident_is_left_alone():
     assert out["rule_adjusted"] is False
 
 
-@pytest.mark.parametrize("outcome", ["do_now", "schedule", "delegate", "decline"])
-def test_unknown_size_becomes_timebox(outcome):
-    out = apply_guardrails(sug(outcome=outcome), production_impact=False, size_known=False)
+def test_unknown_size_do_now_becomes_timebox():
+    out = apply_guardrails(sug(outcome="do_now"), production_impact=False, size_known=False)
     assert out["outcome"] == "timebox"
     assert out["priority"] == 3
     assert out["rule_adjusted"] is True
     assert out["rules"] == [RULE_UNKNOWN_SIZE]
+    assert out["llm_outcome"] == "do_now"
+
+
+@pytest.mark.parametrize("outcome", ["schedule", "delegate", "decline"])
+def test_unknown_size_leaves_non_start_outcomes_alone(outcome):
+    # Found in the demo: a sensible "delegate" was forced to "timebox".
+    out = apply_guardrails(sug(outcome=outcome), production_impact=False, size_known=False)
+    assert out["outcome"] == outcome
+    assert out["rule_adjusted"] is False
+    assert out["rules"] == []
 
 
 def test_unknown_size_already_timebox_not_adjusted():

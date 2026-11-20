@@ -317,8 +317,9 @@ export function mount(el, api) {
       h("div", { class: "s1-meta" },
         h("span", { class: `badge badge-${item.source}` }, item.source),
         h("span", { class: "muted" }, api.timeAgo(item.created_at))),
-      ...status,
-      cardEl, raw, questions, sugEl, decision,
+      // Native replaceChildren() renders null/undefined as the text "null"/"undefined",
+      // so drop the optional parts (raw thread, suggestion) when they're absent.
+      ...[...status, cardEl, raw, questions, sugEl, decision].filter(Boolean),
     );
   }
 
