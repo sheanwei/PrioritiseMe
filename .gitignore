@@ -17,3 +17,5 @@ node_modules/
 
 # Local skill symlinks (absolute paths; recreate from skills-lock.json)
 .claude/skills/
+# Agent worktrees
+.claude/worktrees/
