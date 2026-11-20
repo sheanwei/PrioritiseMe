@@ -109,7 +109,10 @@ export function mount(el, api, ctx) {
   function showEmpty() {
     token += 1;
     view = {};
-    put(gate, h("p", { class: "muted s1-empty" }, EMPTY_TEXT));
+    // The tabbed shell (ctx present) shows its own "Nothing selected" state;
+    // only the legacy shell needs ours, so the two never stack.
+    if (ctx) put(gate);
+    else put(gate, h("p", { class: "muted s1-empty" }, EMPTY_TEXT));
   }
 
   function showError(msg) {
