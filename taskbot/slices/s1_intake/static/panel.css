@@ -1,0 +1,45 @@
+/* S1 intake gate. Uses the shell's tokens from /static/style.css. */
+.s1-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.s1-title { margin: 0; font-size: 17px; overflow-wrap: anywhere; }
+.s1-subtitle { font-size: 13px; color: var(--muted); margin: 16px 0 6px; text-transform: uppercase; letter-spacing: .04em; }
+.s1-actions { display: flex; gap: 6px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+.s1-meta { display: flex; gap: 8px; align-items: baseline; font-size: 12px; margin: 4px 0 10px; }
+
+.s1-error {
+  border: 1px solid var(--error); color: var(--error); border-radius: 6px;
+  padding: 8px 10px; margin: 8px 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+}
+.s1-loading { font-style: italic; }
+
+.s1-card { border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin: 8px 0; }
+.s1-request { font-weight: 600; margin: 0 0 8px; overflow-wrap: anywhere; }
+.s1-dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; margin: 0 0 6px; font-size: 14px; }
+.s1-dl dt { color: var(--muted); }
+.s1-dl dd { margin: 0; overflow-wrap: anywhere; }
+.s1-questions { margin: 4px 0 0; padding-left: 20px; font-size: 14px; }
+
+.s1-raw summary, .s1-sketch summary { cursor: pointer; color: var(--accent); font-size: 14px; }
+.s1-pre {
+  white-space: pre-wrap; overflow-wrap: anywhere; font: 13px/1.45 ui-monospace, Consolas, monospace;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px;
+  max-height: 320px; overflow: auto; margin: 6px 0 0;
+}
+
+.s1-gate fieldset { border: 1px solid var(--border); border-radius: 6px; margin: 10px 0; padding: 8px 12px 12px; min-width: 0; }
+.s1-gate legend { font-size: 13px; color: var(--muted); padding: 0 4px; }
+.s1-field { display: grid; gap: 2px; margin-top: 6px; flex: 1 1 120px; min-width: 0; }
+.s1-field[hidden] { display: none; }
+.s1-label { font-size: 13px; color: var(--muted); }
+.s1-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.s1-flags { display: flex; gap: 16px; margin: 8px 0 4px; font-size: 14px; flex-wrap: wrap; }
+.s1-questions-form .btn, .s1-decision .btn[type="submit"] { margin-top: 10px; }
+.s1-decision > .btn { margin-top: 4px; }
+
+.s1-suggestion { border-left: 4px solid var(--accent); background: var(--bg); border-radius: 6px; padding: 8px 12px; margin: 10px 0; }
+.s1-suggestion p { margin: 6px 0; }
+.s1-sug-head { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+.s1-rule { color: var(--warn); font-weight: 600; }
+.s1-rule-note { font-size: 13px; color: var(--warn); }
+
+.s1-btn-danger { background: var(--error); border-color: var(--error); color: #fff; }
+.s1-btn-warn { background: var(--warn); border-color: var(--warn); }
