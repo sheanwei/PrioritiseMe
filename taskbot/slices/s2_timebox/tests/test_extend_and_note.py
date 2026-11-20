@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from taskbot.core import clock, items
 from taskbot.slices.s2_timebox import service
@@ -136,12 +138,14 @@ def test_reassess_list_hides_items_that_left_the_tray(client):
 # ---------------------------------------------------------------- panel
 
 
-def test_panel_registered_as_timeboxes_order_30(client):
+def test_panels_registered_status_30_and_detail_15(client):
     panels = client.get("/api/core/panels").json()
-    mine = [p for p in panels if p["slice"] == "s2_timebox"]
-    assert mine == [{
-        "id": "s2_timebox", "title": "Timeboxes", "module": "/slices/s2_timebox/panel.js",
-        "order": 30, "slice": "s2_timebox",
-    }]
-    for path in ("panel.js", "countdown.js", "panel.css"):
+    mine = [{k: p[k] for k in ("id", "title", "module", "order")} for p in panels if p["slice"] == "s2_timebox"]
+    assert sorted(mine, key=lambda p: p["id"]) == [
+        {"id": "s2_timebox-reassess", "title": "Re-assess", "module": "/slices/s2_timebox/reassess.js", "order": 15},
+        {"id": "s2_timebox-status", "title": "Timeboxes", "module": "/slices/s2_timebox/status.js", "order": 30},
+    ]
+    manifest = json.loads((Path(__file__).resolve().parents[1] / "static" / "panel.json").read_text())
+    assert [m["region"] for m in manifest] == ["status", "detail"]
+    for path in ("status.js", "reassess.js", "countdown.js", "panel.css"):
         assert client.get(f"/slices/s2_timebox/{path}").status_code == 200

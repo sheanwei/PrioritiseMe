@@ -1,4 +1,5 @@
 [
-  { "id": "s3_resurface-today", "title": "Resurfacing today", "module": "resurfacing.js", "order": 40 },
-  { "id": "s3_resurface-stale", "title": "Probably not needed", "module": "stale.js", "order": 45 }
+  { "id": "s3_resurface-today", "title": "Resurfacing today", "module": "resurfacing.js", "order": 40, "region": "hidden" },
+  { "id": "s3_resurface-stale", "title": "Probably not needed", "module": "stale.js", "order": 45, "region": "list-footer" },
+  { "id": "s3_resurface-stale-status", "title": "Probably not needed", "module": "stale-status.js", "order": 45, "region": "status" }
 ]

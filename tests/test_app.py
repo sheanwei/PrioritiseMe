@@ -40,14 +40,19 @@ def test_shell_health_and_panels(client):
     assert page.status_code == 200
     assert "TaskBot" in page.text
     assert client.get("/static/app.js").status_code == 200
-    assert client.get("/static/panels/tray.js").status_code == 200
+    assert client.get("/static/panels/triage-count.js").status_code == 200
 
     health = client.get("/api/core/health").json()
     assert health["llm"]["mode"] == "fake"
     assert health["mail"]["mode"] == "fake"
 
     panels = client.get("/api/core/panels").json()
-    assert panels[0]["id"] == "tray"
+    core = [p for p in panels if p["slice"] == "core"]
+    assert core == [{
+        "id": "triage-count", "title": "To triage", "module": "/static/panels/triage-count.js",
+        "order": 10, "region": "status", "slice": "core",
+    }]
+    assert all("region" in p for p in panels)
 
 
 # --- slice discovery contract ---
@@ -74,8 +79,9 @@ def test_slice_discovery_mounts_router_static_panel_and_startup(tmp_path, monkey
     (pkg / "demo" / "static" / "panel.js").write_text("export function mount() {}")
     (pkg / "demo" / "static" / "panel.json").write_text(
         json.dumps([
-            {"title": "Demo A", "module": "panel.js", "order": 5},
+            {"title": "Demo A", "module": "panel.js", "order": 5, "region": "detail"},
             {"id": "demo-b", "title": "Demo B", "module": "panel.js", "order": 50},
+            {"id": "demo-c", "title": "Demo C", "module": "panel.js", "order": 60, "region": "sidebar"},
         ])
     )
     monkeypatch.syspath_prepend(str(tmp_path))
@@ -84,8 +90,32 @@ def test_slice_discovery_mounts_router_static_panel_and_startup(tmp_path, monkey
         assert c.get("/api/demo/ping").json() == {"pong": True, "started": [True]}
         assert c.get("/slices/demo/panel.js").status_code == 200
         panels = c.get("/api/core/panels").json()
-        assert [(p["id"], p["module"]) for p in panels] == [
-            ("demo-0", "/slices/demo/panel.js"),
-            ("tray", "/static/panels/tray.js"),
-            ("demo-b", "/slices/demo/panel.js"),
+        assert [(p["id"], p["module"], p["region"]) for p in panels] == [
+            ("demo-0", "/slices/demo/panel.js", "detail"),
+            ("triage-count", "/static/panels/triage-count.js", "status"),
+            ("demo-b", "/slices/demo/panel.js", None),  # missing -> null (shell: "More")
+            ("demo-c", "/slices/demo/panel.js", "sidebar"),  # unknown passes through as-is
         ]
+
+
+def test_core_panels_default_region_to_null(tmp_path, monkeypatch):
+    from taskbot.core import app as app_module
+
+    (tmp_path / "panels.json").write_text(json.dumps([
+        {"id": "a", "title": "A", "module": "/static/a.js", "order": 1},
+        {"id": "b", "title": "B", "module": "/static/b.js", "order": 2, "region": "hidden"},
+    ]))
+    monkeypatch.setattr(app_module, "STATIC_DIR", tmp_path)
+    assert [(p["id"], p["region"]) for p in app_module.core_panels()] == [("a", None), ("b", "hidden")]
+
+
+def test_shell_has_tabs_regions_and_fallback(client):
+    page = client.get("/").text
+    for anchor in ('data-tab="triage"', 'data-tab="mail"', 'data-tab="review"', 'id="status-strip"',
+                   'id="triage-list"', 'id="region-list-footer"', 'id="region-detail"',
+                   'id="region-mail"', 'id="region-review"', 'id="region-more"'):
+        assert anchor in page
+    shell = client.get("/static/app.js").text
+    for name in ('"status"', '"list-footer"', '"detail"', '"mail"', '"review"', '"hidden"'):
+        assert name in shell
+    assert "showTab(" in shell and "selectedId" in shell
