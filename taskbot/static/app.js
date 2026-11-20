@@ -11,6 +11,8 @@
 //   "items:changed"  {}       emit after you create/update/transition items
 //   "item:open"      {id}     open an item in the detail column; id null = nothing selected
 //   "tab:shown"      {tab}    a tab became visible ("triage" | "mail" | "review")
+// Row decoration: api.registerRowBadge(fn) adds fn(item) -> Node|null to every
+// triage-list row's meta area; api.refreshList() re-fetches and re-renders the list.
 
 const bus = new EventTarget();
 
@@ -18,6 +20,8 @@ const TABS = ["triage", "mail", "review"];
 const REGIONS = ["status", "list-footer", "detail", "mail", "review", "hidden"];
 
 let selectedId = null;
+const rowBadgeFns = [];
+let lastItems = null; // last tray items rendered, for re-renders when badges change
 
 async function request(method, path, body) {
   const res = await fetch("/api" + path, {
@@ -106,6 +110,24 @@ export const api = {
   },
   /** The id last opened via "item:open", or null. */
   selectedId: () => selectedId,
+  /**
+   * Decorate triage rows: `fn(item)` returns a DOM Node or null. It is called
+   * for every row on every render (keep it synchronous and cheap); returned
+   * nodes are appended to the row's meta area, before the age. Returns an
+   * unregister function.
+   */
+  registerRowBadge(fn) {
+    if (typeof fn !== "function") return () => {};
+    rowBadgeFns.push(fn);
+    if (lastItems) renderList(lastItems);
+    return () => {
+      const i = rowBadgeFns.indexOf(fn);
+      if (i >= 0) rowBadgeFns.splice(i, 1);
+      if (lastItems) renderList(lastItems);
+    };
+  },
+  /** Re-fetch and re-render the triage list; resolves when done. */
+  refreshList: () => refreshList(),
 };
 
 // ---------------------------------------------------------------- tabs
@@ -251,7 +273,21 @@ const KIND_LABEL = { reassess: "re-assess", resurfaced: "back today", email: "em
 let trayIds = [];
 let refreshSeq = 0;
 
+function rowBadges(item) {
+  const nodes = [];
+  for (const fn of rowBadgeFns) {
+    try {
+      const node = fn(item);
+      if (node instanceof Node) nodes.push(node);
+    } catch (err) {
+      console.error("row badge failed", err);
+    }
+  }
+  return nodes;
+}
+
 function renderList(items) {
+  lastItems = items;
   const list = document.getElementById("triage-list");
   document.getElementById("triage-empty").hidden = items.length > 0;
   list.replaceChildren(...items.map((item) => {
@@ -271,7 +307,10 @@ function renderList(items) {
             ? h("span", { class: "row-pressure", title: `${item.pressure_count} follow-up pings` }, `×${item.pressure_count}`)
             : null,
         ),
-        h("span", { class: "row-age muted" }, timeAgo(item.created_at)),
+        h("span", { class: "row-meta" },
+          rowBadges(item),
+          h("span", { class: "row-age muted" }, timeAgo(item.created_at)),
+        ),
       ));
   }));
   markSelected();

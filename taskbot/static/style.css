@@ -159,6 +159,10 @@ textarea.input { resize: vertical; margin-top: 8px; }
 .kind-reassess .row-label { color: var(--warn); }
 .kind-resurfaced .row-label { color: var(--accent); }
 .row-pressure { color: var(--pressure); font-weight: 600; font-size: 13px; margin-left: 6px; white-space: nowrap; }
+.row-meta {
+  display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center;
+  gap: 2px 6px; flex-shrink: 0; max-width: 50%;
+}
 .row-age { font-size: 12px; flex-shrink: 0; }
 
 /* list-footer slots */

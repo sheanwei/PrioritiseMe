@@ -1,0 +1,26 @@
+/* S7 linked items: slim strip in the detail column + triage-row badges. Shell tokens only. */
+
+.s7-strip { list-style: none; margin: 0; padding: 0 0 0 10px; display: grid; gap: 2px;
+  border-left: 2px solid var(--border); font-size: 13px; min-width: 0; }
+.s7-strip.has-warn { border-left-color: var(--warn); }
+.s7-line { display: flex; align-items: flex-start; gap: 4px; min-width: 0; }
+.s7-open { flex: 1; min-width: 0; font: inherit; color: inherit; background: none; border: 0;
+  padding: 2px 0; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.s7-open:hover .s7-title, .s7-open:focus-visible .s7-title { text-decoration: underline; }
+.s7-open:focus-visible, .s7-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-radius: 4px; }
+.s7-verb { color: var(--muted); font-weight: 600; }
+.s7-ref { color: var(--muted); font-variant-numeric: tabular-nums; }
+.s7-warn .s7-verb, .s7-warn .s7-prio { color: var(--warn); }
+.s7-prio { font-weight: 600; white-space: nowrap; }
+.s7-reason { display: block; font-size: 12px; color: var(--muted); }
+.s7-src { font-size: 11px; color: var(--muted); }
+.s7-x { flex-shrink: 0; font: inherit; line-height: 1; color: var(--muted); background: none; border: 0;
+  padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+.s7-x:hover { color: var(--text); background: var(--badge-bg); }
+.s7-x:disabled { opacity: .5; cursor: default; }
+.s7-inherit { color: var(--muted); }
+.s7-inherit.s7-warn { color: var(--warn); }
+
+/* triage-row badge */
+.s7-badge { white-space: nowrap; color: var(--muted); }
+.s7-badge.s7-warn { color: var(--warn); font-weight: 600; }
