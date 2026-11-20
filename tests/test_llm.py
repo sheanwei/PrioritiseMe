@@ -128,6 +128,7 @@ def test_examples_are_not_sent_to_the_model(real_mode):
 # --- OPENCODE_EXTRA_BODY and list-shaped content ---
 
 def test_extra_body_is_sent_only_when_configured(real_mode, monkeypatch):
+    monkeypatch.delenv("OPENCODE_EXTRA_BODY", raising=False)  # a local .env may set it
     stub = use_stub([GOOD])
     llm.complete_json("s", "u", SCHEMA)
     assert "extra_body" not in stub.calls[0]
