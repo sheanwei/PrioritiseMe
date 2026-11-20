@@ -1,25 +1,30 @@
 // S5 Weekly review panel (FR-50..FR-54).
-// Week selector (prev / current / next), mix by type and outcome, staleness
+// Full-width Review tab (region "review"): week selector, a headline row of
+// five numbers, then mix by type and outcome, staleness
 // closures, "Could have waited", override log with highlighted patterns, and
 // the AI acceptance rate. DOM is built with api.h / textContent only; no HTML parsing.
 
 const STYLE_ID = "s5-review-style";
 const CSS = `
-.s5-nav { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.s5 { display: grid; gap: 16px; min-width: 0; }
+.s5-nav { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .s5-range { font-weight: 600; margin-right: auto; }
-.s5-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; margin-bottom: 12px; }
-.s5-stat { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; }
-.s5-stat-value { font-size: 20px; font-weight: 700; display: block; }
+.s5-body { display: grid; gap: 16px; min-width: 0; }
+.s5-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+.s5-stat { border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; min-width: 0; }
+.s5-stat-value { font-size: 26px; font-weight: 700; display: block; line-height: 1.15; font-variant-numeric: tabular-nums; }
 .s5-stat-label { font-size: 12px; color: var(--muted); }
-.s5-section { margin: 14px 0 0; }
-.s5-section h3 { font-size: 13px; margin: 0 0 6px; }
-.s5-bars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 3px 8px; align-items: center; font-size: 13px; }
+.s5-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 16px 24px; align-items: start; }
+.s5-section { min-width: 0; }
+.s5-section h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+.s5-bars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 4px 8px; align-items: center; font-size: 13px; }
 .s5-bar { height: 8px; background: var(--accent); border-radius: 4px; min-width: 2px; }
 .s5-bar-zero { background: var(--border); }
-.s5-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
-.s5-list li { border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; overflow-wrap: anywhere; }
+.s5-list { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+.s5-list li { padding: 6px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+.s5-list li:last-child { border-bottom: 0; }
 .s5-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-.s5-hot { background: var(--warn); color: #fff; font-weight: 600; }
+.s5-hot { background: var(--warn); color: var(--surface); font-weight: 600; }
 .s5-reason { display: block; color: var(--muted); }
 `;
 
@@ -40,7 +45,7 @@ function fmtRange(startIso, endIso) {
   return `${s.toLocaleDateString(undefined, opts)} – ${e.toLocaleDateString(undefined, { ...opts, year: "numeric" })}`;
 }
 
-export function mount(el, api) {
+export function mount(el, api, ctx) {
   const { h } = api;
   ensureStyle(h);
 
@@ -128,13 +133,15 @@ export function mount(el, api) {
 
     body.replaceChildren(
       stats,
-      section("By type", r.decided.total ? bars(typeEntries) : empty("Nothing decided this week.")),
-      section("By outcome", r.decided.total ? bars(outcomeEntries) : empty("Nothing decided this week.")),
-      section("Staleness closures", staleList),
-      section("Could have waited", waitedList),
-      section("Override log", overrideList),
-      section("Overrides by requester", chips(r.overrides.by_requester)),
-      section("Overrides by reason keyword", chips(r.overrides.by_keyword)),
+      h("div", { class: "s5-grid" },
+        section("By type", r.decided.total ? bars(typeEntries) : empty("Nothing decided this week.")),
+        section("By outcome", r.decided.total ? bars(outcomeEntries) : empty("Nothing decided this week.")),
+        section("Overrides by requester", chips(r.overrides.by_requester)),
+        section("Overrides by reason keyword", chips(r.overrides.by_keyword))),
+      h("div", { class: "s5-grid" },
+        section("Override log", overrideList),
+        section("Staleness closures", staleList),
+        section("Could have waited", waitedList)),
     );
   }
 
@@ -147,7 +154,8 @@ export function mount(el, api) {
     }
   }
 
-  el.append(nav, body);
+  el.append(h("div", { class: "s5" }, nav, body));
   api.on("items:changed", refresh);
+  api.on("tab:shown", (d) => { if (d?.tab === "review") refresh(); });
   refresh();
 }

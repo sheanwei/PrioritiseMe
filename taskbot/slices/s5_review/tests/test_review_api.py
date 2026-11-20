@@ -58,7 +58,7 @@ def test_bad_timezone_is_reported(client, monkeypatch):
 
 def test_panel_registered_and_safe(client):
     panels = client.get("/api/core/panels").json()
-    review = [p for p in panels if p["slice"] == "s5_review"]
+    review = [{k: p[k] for k in ("id", "title", "module", "order", "slice")} for p in panels if p["slice"] == "s5_review"]
     assert review == [
         {"id": "s5_review", "title": "Review", "module": "/slices/s5_review/panel.js", "order": 60, "slice": "s5_review"}
     ]

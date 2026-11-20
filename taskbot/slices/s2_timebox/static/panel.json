@@ -1,1 +1,4 @@
-{"title": "Timeboxes", "module": "panel.js", "order": 30}
+[
+  { "id": "s2_timebox-status", "title": "Timeboxes", "module": "status.js", "order": 30, "region": "status" },
+  { "id": "s2_timebox-reassess", "title": "Re-assess", "module": "reassess.js", "order": 15, "region": "detail" }
+]

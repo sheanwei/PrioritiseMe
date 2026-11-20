@@ -1,35 +1,59 @@
-// S4 "Mail" panel (FR-42, FR-43, FR-46).
+// S4 Mail tab (region "mail"; FR-42, FR-43, FR-46).
 // Email content is untrusted: everything is built with api.h / textContent.
 // FR-47: email never triggers a browser notification, so this panel only uses api.toast.
 
 const LABELS = { needs_action: "Needs action", fyi: "FYI", noise: "Noise", unclassified: "Unclassified" };
+const COUNT_WORDS = { needs_action: "need action", fyi: "FYI", noise: "noise", unclassified: "unclassified" };
+const CLASSES = ["needs_action", "fyi", "noise"];
 const ALLOWED_SIGNIN_HOSTS = /^https:\/\/([a-z0-9-]+\.)*(microsoft\.com|microsoftonline\.com|live\.com)\//i;
 
-export function mount(el, api) {
+const STYLE_ID = "s4-mail-style";
+const CSS = `
+.s4-mail { display: grid; gap: 12px; min-width: 0; }
+.s4-head { display: flex; align-items: center; gap: 8px 12px; flex-wrap: wrap; }
+.s4-counts { font-weight: 600; margin-right: auto; }
+.s4-status { font-size: 13px; overflow-wrap: anywhere; }
+.s4-signin { border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: var(--radius); padding: 8px 12px; background: var(--surface); }
+.s4-signin p { margin: 4px 0; overflow-wrap: anywhere; }
+.s4-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.s4-row { display: grid; grid-template-columns: minmax(0, 14rem) minmax(0, 1fr) auto; grid-template-areas: "from subj meta" "acts acts acts";
+  gap: 2px 12px; align-items: baseline; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+.s4-row:last-child { border-bottom: 0; }
+.s4-from { grid-area: from; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s4-subj { grid-area: subj; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.s4-meta { grid-area: meta; display: flex; gap: 6px; align-items: baseline; font-size: 12px; white-space: nowrap; }
+.s4-acts { grid-area: acts; display: flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.s4-acts .btn-small { padding: 2px 8px; font-size: 12px; }
+.s4-acts .s4-acts-label { font-size: 12px; align-self: center; }
+.s4-row[data-class="needs_action"] .s4-class { color: var(--pressure); font-weight: 600; }
+@media (max-width: 640px) {
+  .s4-row { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "from meta" "subj subj" "acts acts"; }
+  .s4-acts { justify-content: flex-start; }
+}
+`;
+
+function ensureStyle() {
+  if (document.getElementById(STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = STYLE_ID;
+  style.textContent = CSS;
+  document.head.append(style);
+}
+
+export function mount(el, api, ctx) {
   const { h } = api;
+  ensureStyle();
 
+  const countsLine = h("span", { class: "s4-counts" }, "…");
   const syncBtn = h("button", { type: "button", class: "btn btn-small", onclick: () => syncNow() }, "Sync now");
-  const statusLine = h("span", { class: "muted" });
-  const header = h("div", { class: "quickadd-row" }, syncBtn, statusLine);
-  const signinBox = h("div", { hidden: true, "aria-live": "polite" });
-  const countsRow = h("p", { class: "item-meta" });
-  const list = h("ul", { class: "item-list", "aria-label": "Recent mail" });
+  const statusLine = h("div", { class: "muted s4-status" });
+  const signinBox = h("div", { class: "s4-signin", hidden: true, "aria-live": "polite" });
+  const list = h("ul", { class: "s4-list", "aria-label": "Recent mail" });
   const empty = h("p", { class: "muted", hidden: true }, "No mail yet. Press Sync now.");
-
-  // Mail rows carry more metadata than tray rows, so stack the subject above the
-  // metadata instead of using the core one-line .item layout (which squeezed the
-  // subject to one character wide). Scoped to this panel; core CSS is untouched.
-  const style = h("style", {});
-  style.textContent = `
-    .s4-mail .item.s4-mail-row { flex-direction: column; align-items: stretch; gap: 6px; }
-    .s4-mail .s4-mail-row .item-meta { flex-wrap: wrap; flex-shrink: 1; align-items: center; min-width: 0; }
-    .s4-mail .s4-mail-row .s4-from { overflow-wrap: anywhere; }
-    .s4-mail .s4-mail-actions { margin-left: auto; display: flex; gap: 6px; }
-    .s4-mail .s4-counts { flex-wrap: wrap; }
-    .s4-mail .quickadd-row { align-items: center; flex-wrap: wrap; }`;
-  el.classList.add("s4-mail");
-  countsRow.classList.add("s4-counts");
-  el.append(style, header, signinBox, countsRow, list, empty);
+  const root = h("div", { class: "s4-mail" },
+    h("div", {}, h("div", { class: "s4-head" }, countsLine, syncBtn), statusLine),
+    signinBox, list, empty);
+  el.append(root);
 
   let signinTimer = null;
 
@@ -64,6 +88,11 @@ export function mount(el, api) {
     refresh();
   }
 
+  function openItem(id) {
+    if (typeof api.showTab === "function") api.showTab("triage");
+    api.emit("item:open", { id });
+  }
+
   async function startSignin() {
     try {
       await api.post("/s4_outlook/signin");
@@ -75,9 +104,7 @@ export function mount(el, api) {
 
   function pollSignin() {
     clearTimeout(signinTimer);
-    signinTimer = setTimeout(async () => {
-      await refresh();
-    }, 3000);
+    signinTimer = setTimeout(() => { refresh(); }, 3000);
   }
 
   function renderSignin(status) {
@@ -110,64 +137,65 @@ export function mount(el, api) {
     const last = status.last_sync;
     const bits = [`mode: ${status.mode}`];
     if (last) bits.push(`last sync ${api.timeAgo(last.at)}${last.ok ? "" : " (failed)"}`);
+    if (status.config_error) bits.push(status.config_error);
     statusLine.textContent = bits.join(" · ");
     statusLine.classList.toggle("error", status.connection === "error" || Boolean(status.config_error));
-    if (status.connection === "error" && status.last_error) statusLine.title = status.last_error;
-    if (status.config_error) statusLine.textContent += ` · ${status.config_error}`;
+    statusLine.classList.toggle("muted", !statusLine.classList.contains("error"));
+    statusLine.title = status.connection === "error" && status.last_error ? status.last_error : "";
   }
 
   function renderCounts(counts) {
-    countsRow.replaceChildren(
-      ...["needs_action", "fyi", "noise"].map((k) =>
-        h("span", { class: `badge badge-mail-${k}`, title: LABELS[k] }, `${LABELS[k]}: ${counts[k] || 0}`)),
-      ...(counts.unclassified
-        ? [h("span", { class: "badge", title: "Waiting for the LLM" }, `Unclassified: ${counts.unclassified}`)]
-        : []),
+    const keys = [...CLASSES, ...(counts.unclassified ? ["unclassified"] : [])];
+    countsLine.textContent = keys.map((k) => `${counts[k] || 0} ${COUNT_WORDS[k]}`).join(" · ");
+  }
+
+  function row(m) {
+    const cls = m.classification || "unclassified";
+    const acts = [];
+    if (m.item_id) {
+      acts.push(h("button", { type: "button", class: "btn btn-ghost btn-small", onclick: () => openItem(m.item_id) }, "Open item"));
+    }
+    if (m.classification) {
+      acts.push(h("span", { class: "muted s4-acts-label" }, "Mark:"));
+      for (const to of CLASSES.filter((c) => c !== m.classification)) {
+        acts.push(h("button", {
+          type: "button", class: "btn btn-ghost btn-small", title: `Correct the classification to ${LABELS[to]}`,
+          onclick: () => correct(m, to),
+        }, LABELS[to]));
+      }
+    }
+    return h("li", { class: "s4-row", "data-email-id": m.id, "data-class": cls },
+      h("span", { class: "s4-from", title: m.from || "" }, m.from || "(unknown sender)"),
+      h("span", { class: "s4-subj", title: m.body_preview || m.subject || "" }, m.subject || "(no subject)"),
+      h("span", { class: "s4-meta" },
+        m.user_corrected ? h("span", { class: "badge", title: "You corrected this" }, "corrected") : null,
+        h("span", { class: "badge s4-class" }, LABELS[cls]),
+        h("span", { class: "muted", title: m.received_at || "" }, api.timeAgo(m.received_at))),
+      acts.length ? h("span", { class: "s4-acts" }, ...acts) : null,
     );
   }
 
   function renderList(recent) {
     empty.hidden = recent.length > 0;
-    list.replaceChildren(...recent.map((m) => {
-      const actionable = m.classification === "needs_action";
-      const button = m.classification
-        ? h("button", {
-            type: "button", class: "btn btn-ghost btn-small",
-            onclick: () => correct(m, actionable ? "fyi" : "needs_action"),
-          }, actionable ? "Not actionable" : "This needs action")
-        : null;
-      return h("li", { class: "item s4-mail-row", "data-email-id": m.id },
-        h("span", { class: "item-title", title: m.body_preview || "" }, m.subject || "(no subject)"),
-        h("span", { class: "item-meta" },
-          h("span", { class: "badge" }, LABELS[m.classification || "unclassified"]),
-          m.user_corrected ? h("span", { class: "badge", title: "You corrected this" }, "corrected") : null,
-          h("span", { class: "muted s4-from" }, m.from || ""),
-          h("span", { class: "muted" }, api.timeAgo(m.received_at)),
-          h("span", { class: "s4-mail-actions" },
-            m.item_id ? h("button", {
-              type: "button", class: "btn btn-ghost btn-small",
-              onclick: () => api.emit("item:open", { id: m.item_id }),
-            }, "Open item") : null,
-            button,
-          ),
-        ),
-      );
-    }));
+    list.hidden = recent.length === 0;
+    list.replaceChildren(...recent.map(row));
   }
 
   async function refresh() {
     try {
-      const data = await api.get("/s4_outlook/state");
+      const data = await api.get("/s4_outlook/state?limit=50");
       renderStatus(data.status);
       renderSignin(data.status);
       renderCounts(data.counts);
       renderList(data.recent);
     } catch (err) {
-      list.replaceChildren(h("li", { class: "error" }, `Could not load mail: ${err.message}`));
+      list.hidden = false;
+      list.replaceChildren(h("li", { class: "error s4-row" }, `Could not load mail: ${err.message}`));
     }
   }
 
   api.on("items:changed", refresh);
+  api.on("tab:shown", (d) => { if (d?.tab === "mail") refresh(); });
   setInterval(refresh, 60000);
   refresh();
 }
