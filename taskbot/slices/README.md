@@ -32,9 +32,17 @@ Folder names: `s1_intake`, `s2_timebox`, `s3_resurface`, `s4_outlook`, `s5_revie
 - `static/` is served at `/slices/<folder>/`.
 - `static/panel.json` adds your panel(s) to the dashboard. A relative `module` is resolved inside your static folder:
   ```json
-  {"title": "Timeboxes", "module": "panel.js", "order": 30}
+  {"title": "Timeboxes", "module": "panel.js", "order": 30, "region": "list-footer"}
   ```
-  Orders: tray 10, S1 20, S2 30, S3 40–45, S4 50, S5 60.
+  Orders: core status item 10, S1 20, S2 30, S3 40–45, S4 50, S5 60.
+- `region` picks where the panel mounts (PRD §4.7):
+  - `status`: inline item in the top-bar status strip (`el` is a `<span>`; the shell adds `·` separators)
+  - `list-footer`: collapsible `<details>` under the triage list, collapsed, `<summary>` = your title
+  - `detail`: right column of the Triage tab, stacked by `order`
+  - `mail` / `review`: the Mail / Review tab, full width
+  - `hidden`: never mounted
+
+  Missing or unknown → a fallback "More" section at the bottom of the Triage tab.
 
 ## Core API you'll use
 
@@ -60,15 +68,25 @@ clock.now() / clock.now_iso()                         # never datetime.now()
 - Migrations: plain SQL with no `BEGIN`/`COMMIT` (the runner wraps each file in a transaction). Never alter or drop core columns.
 - LLM schemas: add an `"examples": [ {...} ]` entry. Fake mode returns `examples[0]`, so you control what your tests see. Examples are never sent to the real model.
 
-## Panel API (`mount(el, api)`)
+## Panel API (`mount(el, api, ctx)`)
 
 ```js
 api.get("/s2_timebox/state")   api.post(path, body)   api.put/patch/del
 api.on("items:changed", fn)    api.emit("items:changed")
-api.on("item:open", ({id}) => ...)   // the tray emits this when an item is clicked (S1 owns the response)
+api.on("item:open", ({id}) => ...)   // the triage list emits this on click/Enter; id null = nothing selected
+api.on("tab:shown", ({tab}) => ...)  // "triage" | "mail" | "review"
+api.showTab("triage")          api.selectedId()      // id last opened via item:open, or null
 api.notify(title, body)        // browser notification + toast
 api.toast(msg, "error")        api.h(tag, attrs, ...children)   api.timeAgo(iso)
+
+ctx.region                     // your region ("more" in the fallback section)
+ctx.setTitle("Resurfacing · 3")  // list-footer: updates the <summary>; no-op elsewhere
+ctx.setHidden(true)            // hide your whole slot when there is nothing to show
 ```
+
+When the selected item leaves the triage list, the shell auto-advances: it emits `item:open` for the first remaining row, or `{id: null}` when the list is empty.
+
+Style with the tokens in `taskbot/static/style.css` and the shared classes `.btn .btn-ghost .btn-small .input .badge .muted .error .item-list .item`. Don't draw boxed cards around your panel; the shell owns the layout.
 
 Build DOM with `api.h` (or `textContent`) and never with `innerHTML`, because email content is untrusted.
 

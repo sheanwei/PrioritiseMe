@@ -8,13 +8,49 @@
 </head>
 <body>
   <header class="topbar">
-    <h1>TaskBot</h1>
-    <div class="topbar-right">
+    <span class="brand">TaskBot</span>
+    <nav class="tabs" role="tablist" aria-label="Views">
+      <button type="button" class="tab" role="tab" id="tabbtn-triage" data-tab="triage" aria-controls="tab-triage">Triage</button>
+      <button type="button" class="tab" role="tab" id="tabbtn-mail" data-tab="mail" aria-controls="tab-mail">Mail</button>
+      <button type="button" class="tab" role="tab" id="tabbtn-review" data-tab="review" aria-controls="tab-review">Review</button>
+    </nav>
+    <div id="status-strip" class="status-strip" aria-live="polite"></div>
+    <div class="topbar-meta">
       <span id="health" class="health" aria-live="polite">…</span>
-      <button id="notify-btn" class="btn btn-ghost" hidden>Enable notifications</button>
+      <button id="notify-btn" type="button" class="link-btn" hidden>Enable notifications</button>
     </div>
   </header>
-  <main id="panels" class="panels"></main>
+
+  <main id="panels" class="views">
+    <section id="tab-triage" class="view" role="tabpanel" aria-labelledby="tabbtn-triage">
+      <div class="triage">
+        <div class="triage-list-col">
+          <div id="quickadd"></div>
+          <ul id="triage-list" class="item-list triage-list" aria-label="Awaiting a decision"></ul>
+          <p id="triage-empty" class="empty muted" hidden>Nothing awaiting a decision.</p>
+          <div id="region-list-footer" class="list-footer"></div>
+        </div>
+        <div class="triage-detail-col" id="region-detail">
+          <div id="detail-empty" class="empty detail-empty">
+            <p>Nothing selected.</p>
+            <p class="muted">Pick an item on the left, or use ↑ ↓ and Enter.</p>
+          </div>
+        </div>
+      </div>
+      <section id="region-more" class="more" hidden>
+        <h2 class="section-label">More</h2>
+        <div class="more-grid" id="region-more-slots"></div>
+      </section>
+    </section>
+    <section id="tab-mail" class="view" role="tabpanel" aria-labelledby="tabbtn-mail" hidden>
+      <div id="region-mail" class="region-full"></div>
+      <p class="empty muted" data-empty-for="region-mail">Nothing here yet.</p>
+    </section>
+    <section id="tab-review" class="view" role="tabpanel" aria-labelledby="tabbtn-review" hidden>
+      <div id="region-review" class="region-full"></div>
+      <p class="empty muted" data-empty-for="region-review">Nothing here yet.</p>
+    </section>
+  </main>
   <div id="toasts" class="toasts" aria-live="polite"></div>
   <script type="module" src="/static/app.js"></script>
 </body>

@@ -220,17 +220,38 @@ complete_json(system: str, user: str, schema: dict, model: str | None = None) ->
 
 ### 4.7 Dashboard shell
 - `index.html` fetches `/api/core/panels`, which merges the core `panels.json` with every slice's `panel.json` and sorts them by `order`. It loads each panel as an ES module.
-- Panel orders: tray 10, S1 20, S2 30, S3 40–45, S4 50, S5 60.
-- Each panel exports `mount(el, api)`. `api` provides:
+- **Layout.** A top bar holds "TaskBot", the tabs Triage · Mail · Review, a one-line status strip, and (quiet, far right) the LLM/mail health text and the notifications button. The tab lives in the URL hash: `#triage` (default), `#mail`, `#review`. The **Triage** tab has the quick-add form and the shell-owned **triage list** (tray items, `GET /api/core/items?status=tray`) on the left and the **detail** column on the right. Mail and Review show their panels at full width.
+- **Regions.** Each manifest entry may set `"region"`; `/api/core/panels` passes it through for core and slice entries (default `null`):
+
+  | Region | Where it mounts | `el` |
+  |---|---|---|
+  | `status` | inline item in the top-bar status strip; the shell puts `·` between visible items | `<span>` |
+  | `list-footer` | collapsible section under the triage list | wrapped in `<details>` (collapsed), `<summary>` = manifest title |
+  | `detail` | right column of Triage, stacked by `order` | `<div>` |
+  | `mail` / `review` | the Mail / Review tab | `<div>` |
+  | `hidden` | never mounted | — |
+
+  A missing or unknown region mounts in a fallback **More** section at the bottom of the Triage tab (with the title as a heading), so nothing is ever lost.
+- Panel orders: core status item 10, S1 20, S2 30, S3 40–45, S4 50, S5 60.
+- Each panel exports `mount(el, api, ctx)`. `ctx` provides:
+  - `region`: the region name (`"more"` for the fallback section)
+  - `setTitle(text)`: updates the `<summary>` of a `list-footer` panel; a no-op elsewhere
+  - `setHidden(bool)`: hides or shows the panel's whole region slot (e.g. a status item or detail banner with nothing to show)
+- `api` provides:
   - `get/post/put/patch/del`: a thin `fetch` wrapper around `/api/...`
   - `on(type, fn)` / `emit(type, detail)`: an in-page event bus
   - `notify(title, body)`: a browser notification plus a toast
   - `toast(msg, kind)`
   - `h(tag, attrs, ...children)`: safe DOM building
   - `timeAgo(iso)`
+  - `showTab(name)`: switch to `"triage"`, `"mail"` or `"review"`
+  - `selectedId()`: the id last opened via `item:open`, or `null`
 - **Shared UI events:**
   - `items:changed`: emit it after creating or changing items, so the other panels refresh.
-  - `item:open {id}`: the tray emits it when an item is clicked. **S1 listens** and opens the intake gate.
+  - `item:open {id}`: the triage list emits it when a row is clicked (or Enter after ↑/↓). **S1 listens** and shows the decision card; S2 listens for its re-assess banner. `id: null` means "nothing selected".
+  - `tab:shown {tab}`: a tab became visible (also emitted once after all panels are mounted).
+- **Auto-advance.** After the list refreshes (on `items:changed`), if the selected item was in the triage list and no longer is, the shell emits `item:open` for the first remaining row, or `item:open {id: null}` if the list is empty.
+- **Styling.** Slices use only the tokens in `style.css` (`--bg --surface --border --text --muted --accent --accent-text --warn --error --badge-bg --pressure --radius --gap`) and the classes `.btn .btn-ghost .btn-small .input .badge .muted .error .item-list .item`.
 - Slice API routes live under `/api/<slice>/...`.
 - No frontend framework or build step. Never put untrusted text (email, threads) into `innerHTML`.
 - Browser notifications go through `api.notify(title, body)`. The shell asks for notification permission once.
