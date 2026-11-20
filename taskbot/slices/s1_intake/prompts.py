@@ -29,6 +29,12 @@ Definitions:
 - production_impact: true only if production users or systems are affected right now.
 
 Weigh the engineer's existing commitments (listed in the context) before suggesting do_now.
+
+Linked items (if the context lists any) matter more than this item's own thread:
+- If this item BLOCKS something more urgent, its urgency and priority follow that item.
+  The solution sketch and draft reply must mention the dependency. Never write "no rush"
+  or "next week" when this item unblocks urgent work.
+- If this item IS BLOCKED BY another item, say so and suggest unblocking that first.
 Keep the rationale to at most 3 short sentences. The solution sketch gives practical first
 steps, questions to ask the requester, or a short draft reply.
 
