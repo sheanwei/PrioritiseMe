@@ -371,6 +371,10 @@ def decide(
     item = _require(item_id)
     if item.status != Status.TRAY:
         raise Conflict(f"item {item_id} is {item.status}, not in the tray")
+    # S6 / FR-23: an item back from an expired timebox needs a "what did you learn?"
+    # note (S2) before it can be decided again.
+    if item.extra.get("reassess") and not (item.extra.get("reassess_note") or "").strip():
+        raise Conflict("this item's timebox ended: add what you learned before deciding")
 
     # Outcome-specific inputs (FR-16). Clear the others so no stale value lingers.
     now = clock.now()
@@ -429,7 +433,19 @@ def decide(
         )
         _save(item_id, conn, **s1_values)
         event = items.log_event(item_id, EventKind.DECIDED, payload, conn=conn)
+        _clear_reassess(item, conn)
     return {"item": item.to_dict(), "event": event.to_dict()}
+
+
+def _clear_reassess(item: Item, conn: Any) -> None:
+    """S6: once re-decided, the item is no longer awaiting re-assessment (S2's flag)."""
+    if not item.extra.get("reassess"):
+        return
+    try:
+        from taskbot.slices.s2_timebox import service as s2
+    except ImportError:  # S2 not installed: nothing to clear
+        return
+    s2.clear_reassess(item.id, conn=conn)
 
 
 def incident_fast_path(item_id: int) -> dict[str, Any]:
@@ -464,6 +480,8 @@ def incident_fast_path(item_id: int) -> dict[str, Any]:
             },
             conn=conn,
         )
+        # An incident never waits for a re-assess note, but it does clear the flag.
+        _clear_reassess(item, conn)
     return {"item": item.to_dict(), "event": event.to_dict()}
 
 

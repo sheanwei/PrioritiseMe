@@ -18,6 +18,10 @@ def taskbot_env(tmp_path, monkeypatch):
     monkeypatch.setenv("TASKBOT_MAIL", "fake")
     monkeypatch.setenv("TASKBOT_SCHEDULER", "off")
     monkeypatch.setenv("TASKBOT_DEBUG", "0")
+    # A developer's .env must not change test behaviour (e.g. OPENCODE_EXTRA_BODY
+    # adds an `extra_body` kwarg that strict test stubs reject).
+    monkeypatch.delenv("OPENCODE_EXTRA_BODY", raising=False)
+    monkeypatch.delenv("TASKBOT_REVIEW_TZ", raising=False)
     db.migrate()
     yield tmp_path
     clock.set_now(None)
