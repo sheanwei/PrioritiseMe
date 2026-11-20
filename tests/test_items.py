@@ -99,10 +99,12 @@ def test_update_fields_guards_and_ask_card_roundtrip():
 
 def test_slice_added_columns_appear_in_extra_and_are_updatable():
     with db.connect() as conn:
-        conn.execute("ALTER TABLE items ADD COLUMN reassess INTEGER DEFAULT 0")
-    item = items.create_item("x", reassess=1)
-    assert item.extra == {"reassess": 1}
-    assert items.update_fields(item.id, reassess=0).extra["reassess"] == 0
+        # A made-up column: real slice migrations add their own columns too, so
+        # check this key rather than the whole of ``extra``.
+        conn.execute("ALTER TABLE items ADD COLUMN zz_test_extra INTEGER DEFAULT 0")
+    item = items.create_item("x", zz_test_extra=1)
+    assert item.extra["zz_test_extra"] == 1
+    assert items.update_fields(item.id, zz_test_extra=0).extra["zz_test_extra"] == 0
 
 
 def test_list_items_filters_and_orders():

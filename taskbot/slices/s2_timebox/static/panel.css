@@ -1,0 +1,12 @@
+/* S2 Timeboxes panel. Uses the shell's CSS variables. */
+.s2-section + .s2-section { margin-top: 14px; }
+.s2-heading { font-size: 13px; font-weight: 600; margin: 0 0 6px; }
+.s2-row { display: flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; }
+.s2-row .item-title { flex: 1; min-width: 0; }
+.s2-countdown { font-variant-numeric: tabular-nums; font-weight: 600; min-width: 4.5em; text-align: right; }
+.s2-countdown.s2-up { color: var(--warn); }
+.s2-reassess { display: grid; gap: 6px; border: 1px solid var(--border); border-left: 4px solid var(--warn); border-radius: 6px; padding: 8px 10px; }
+.s2-reassess-head { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.s2-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.s2-banner { background: var(--surface); border: 1px solid var(--border); border-left: 4px solid var(--warn); border-radius: 6px; padding: 10px 12px; margin: 0 0 12px; display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+.s2-banner ul { margin: 4px 0 0; padding-left: 18px; }
