@@ -78,11 +78,15 @@ api.on("tab:shown", ({tab}) => ...)  // "triage" | "mail" | "review"
 api.showTab("triage")          api.selectedId()      // id last opened via item:open, or null
 api.notify(title, body)        // browser notification + toast
 api.toast(msg, "error")        api.h(tag, attrs, ...children)   api.timeAgo(iso)
+api.registerRowBadge(fn)       // decorate triage rows; returns an unregister function
+api.refreshList()              // re-fetch + re-render the triage list (returns a Promise)
 
 ctx.region                     // your region ("more" in the fallback section)
 ctx.setTitle("Resurfacing · 3")  // list-footer: updates the <summary>; no-op elsewhere
 ctx.setHidden(true)            // hide your whole slot when there is nothing to show
 ```
+
+Row badges: `fn(item)` gets each triage-list item (the `/api/core/items` shape) and returns a DOM Node or `null`. The shell calls every registered `fn` on every render and appends the nodes to the row's meta area (`.row-meta`, before the age). Keep `fn` synchronous and cheap: read from a cache you fill yourself, then call `api.refreshList()` when that cache changes. A throwing `fn` is logged and skipped. Older shells lack the hook, so feature-detect it: `if (typeof api.registerRowBadge === "function") ...`. Use `.badge` plus your own class, e.g. `api.h("span", {class: "badge s7-badge"}, "⛓ blocked")`.
 
 When the selected item leaves the triage list, the shell auto-advances: it emits `item:open` for the first remaining row, or `{id: null}` when the list is empty.
 
