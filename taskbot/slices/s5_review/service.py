@@ -16,7 +16,10 @@ Definitions (all "in the week" means ``week.since_iso <= at < week.until_iso``):
   event with ``to = closed_stale``, in the week (one per item).
 * **Could have waited** — an item declined in the week (a ``decided`` event
   with ``outcome = decline`` or a ``status_changed`` to ``declined``) with no
-  ``external_activity`` event after the decline, up to now.
+  ``external_activity`` event after the decline, up to now. Items closed only
+  because an email was corrected to "not actionable" (a ``classification_corrected``
+  event away from ``needs_action`` and no ``decided`` decline) are excluded:
+  they were never real requests, so they are not evidence of urgency that waited.
 * **Override** — a ``decided`` event with ``accepted`` false. Decisions without
   an ``accepted`` boolean (e.g. logged without a suggestion) count towards
   FR-51 but not towards the acceptance rate.
@@ -223,6 +226,8 @@ def _could_have_waited(conn: sqlite3.Connection, week_events, item) -> dict[str,
             declines[e.item_id] = e  # earliest decline signal in the week
     rows = []
     for item_id, decline in declines.items():
+        if _archived_by_correction(conn, item_id):
+            continue
         followups = [
             f
             for f in items.list_events(
@@ -243,6 +248,25 @@ def _could_have_waited(conn: sqlite3.Connection, week_events, item) -> dict[str,
         )
     rows.sort(key=lambda r: (r["declined_at"], r["id"]))
     return {"count": len(rows), "label": "Could have waited", "items": rows}
+
+
+def _archived_by_correction(conn: sqlite3.Connection, item_id: int) -> bool:
+    """True if the item was declined only because its email was marked not actionable.
+
+    S4 archives a tray item by moving it to ``declined`` without a ``decided``
+    event and logs ``classification_corrected`` (``to`` != ``needs_action``).
+    A real decline from the intake gate always has a ``decided`` event, so it
+    still counts even if the email was corrected afterwards.
+    """
+    events = items.list_events(
+        item_id=item_id, kinds=[EventKind.DECIDED, EventKind.CLASSIFICATION_CORRECTED], conn=conn
+    )
+    if any(e.kind == EventKind.DECIDED and e.payload.get("outcome") == Outcome.DECLINE for e in events):
+        return False
+    return any(
+        e.kind == EventKind.CLASSIFICATION_CORRECTED and e.payload.get("to") not in (None, "needs_action")
+        for e in events
+    )
 
 
 def _overrides_and_acceptance(conn: sqlite3.Connection, decisions, item) -> tuple[dict, dict]:

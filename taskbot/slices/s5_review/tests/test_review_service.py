@@ -174,6 +174,29 @@ def test_decline_seen_only_as_status_change_counts():
     assert [i["title"] for i in waited["items"]] == ["Declined via status only"]
 
 
+def test_email_archived_as_not_actionable_is_not_could_have_waited():
+    # S4 behaviour: tray item -> declined with no decided event, plus classification_corrected
+    archived = seed_item(title="Newsletter misread", status="declined", type="interrupt", source="email")
+    seed_event(archived.id, "status_changed", {"from": "tray", "to": "declined"}, at=IN_WEEK)
+    seed_event(archived.id, "classification_corrected", {"from": "needs_action", "to": "noise"}, at=IN_WEEK)
+    waited = review()["could_have_waited"]
+    assert waited["count"] == 0 and waited["items"] == []
+
+
+def test_gate_decline_still_counts_even_if_email_corrected_later():
+    item = decided_item("decline", "interrupt", at="2026-11-17T01:00:00+00:00", source="email")
+    seed_event(item.id, "classification_corrected", {"from": "needs_action", "to": "fyi"}, at=IN_WEEK)
+    waited = review()["could_have_waited"]
+    assert [i["id"] for i in waited["items"]] == [item.id]
+
+
+def test_correction_back_to_needs_action_does_not_exclude():
+    item = seed_item(title="Declined via status", status="declined", type="interrupt")
+    seed_event(item.id, "status_changed", {"from": "tray", "to": "declined"}, at=IN_WEEK)
+    seed_event(item.id, "classification_corrected", {"from": "fyi", "to": "needs_action"}, at=BEFORE)
+    assert review()["could_have_waited"]["count"] == 1
+
+
 # --- AC2 / FR-53: override log grouping and highlighting ----------------------
 
 
