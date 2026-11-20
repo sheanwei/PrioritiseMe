@@ -123,3 +123,35 @@ def test_examples_are_not_sent_to_the_model(real_mode):
     schema = {**SCHEMA, "examples": [{"request": "SECRET_EXAMPLE"}]}
     llm.complete_json("s", "u", schema)
     assert "SECRET_EXAMPLE" not in stub.calls[0]["messages"][0]["content"]
+
+
+# --- OPENCODE_EXTRA_BODY and list-shaped content ---
+
+def test_extra_body_is_sent_only_when_configured(real_mode, monkeypatch):
+    monkeypatch.delenv("OPENCODE_EXTRA_BODY", raising=False)  # a local .env may set it
+    stub = use_stub([GOOD])
+    llm.complete_json("s", "u", SCHEMA)
+    assert "extra_body" not in stub.calls[0]
+
+    monkeypatch.setenv("OPENCODE_EXTRA_BODY", '{"thinking": {"type": "disabled"}}')
+    stub = use_stub([GOOD])
+    llm.complete_json("s", "u", SCHEMA)
+    assert stub.calls[0]["extra_body"] == {"thinking": {"type": "disabled"}}
+
+
+def test_invalid_extra_body_is_rejected(monkeypatch):
+    from taskbot.core.config import settings
+
+    monkeypatch.setenv("OPENCODE_EXTRA_BODY", "not json")
+    with pytest.raises(ValueError, match="OPENCODE_EXTRA_BODY"):
+        settings()
+    monkeypatch.setenv("OPENCODE_EXTRA_BODY", "[1, 2]")
+    with pytest.raises(ValueError, match="JSON object"):
+        settings()
+
+
+def test_list_shaped_content_is_joined(real_mode):
+    # Some models (seen with mistral-large-4) return content as a list of parts.
+    half = len(GOOD) // 2
+    use_stub([[{"type": "text", "text": GOOD[:half]}, {"type": "text", "text": GOOD[half:]}]])
+    assert llm.complete_json("s", "u", SCHEMA)["blocked_count"] == 3

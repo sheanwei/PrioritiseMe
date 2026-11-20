@@ -52,13 +52,16 @@ def complete_json(
         {"role": "system", "content": system + _schema_instruction(schema)},
         {"role": "user", "content": user},
     ]
+    extra: dict[str, Any] = {}
+    if s.opencode_extra_body:
+        extra["extra_body"] = s.opencode_extra_body
     last_error: Exception | None = None
     for _attempt in range(2):
         try:
             response = client.chat.completions.create(
-                model=model, messages=messages, temperature=0.2
+                model=model, messages=messages, temperature=0.2, **extra
             )
-            content = response.choices[0].message.content or ""
+            content = _content_text(response.choices[0].message.content)
         except Exception as exc:  # network / API error: retry once
             last_error = exc
             continue
@@ -110,6 +113,25 @@ def _schema_instruction(schema: dict[str, Any]) -> str:
         "It must validate against this JSON Schema:\n"
         + json.dumps(_strip_examples(schema))
     )
+
+
+def _content_text(content: Any) -> str:
+    """Message content as text. Some models return a list of content parts."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for part in content:
+            if isinstance(part, str):
+                parts.append(part)
+            elif isinstance(part, dict) and part.get("type", "text") == "text":
+                parts.append(str(part.get("text", "")))
+            elif getattr(part, "text", None) is not None:
+                parts.append(str(part.text))
+        return "".join(parts)
+    return str(content)
 
 
 _FENCE_RE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
