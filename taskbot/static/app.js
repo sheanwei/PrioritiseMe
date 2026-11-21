@@ -387,7 +387,8 @@ function makeSlot(p, region) {
   if (region === "list-footer") {
     const summary = h("summary", {}, label);
     const el = h("div", { class: "panel-body" });
-    const slot = h("details", { ...common, class: "footer-slot panel" }, summary, el);
+    // Manifest `"open": true` starts the section expanded (default: collapsed).
+    const slot = h("details", { ...common, class: "footer-slot panel", open: p.open === true }, summary, el);
     document.getElementById("region-list-footer").append(slot);
     return { slot, el, setTitle(text) { summary.textContent = text; } };
   }

@@ -60,6 +60,8 @@ class SliceInfo:
                     "order": entry.get("order", 100),
                     "region": entry.get("region"),
                     "slice": self.name,
+                    # Optional: a list-footer section that starts expanded.
+                    **({"open": bool(entry["open"])} if "open" in entry else {}),
                 }
             )
         return panels

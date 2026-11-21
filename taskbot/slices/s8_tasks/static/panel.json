@@ -1,0 +1,1 @@
+{ "id": "s8_tasks", "title": "My tasks", "module": "panel.js", "order": 35, "region": "list-footer", "open": true }
